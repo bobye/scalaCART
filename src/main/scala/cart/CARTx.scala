@@ -26,8 +26,11 @@ class CARTx {
     var r: Double // resubstitution of node
     var R: Double // resubstitution of tree
     val parent: Branch
+    def clear(): Unit
     def classify(x:List[Double]): Int
     def weakestLink(): (Double, Tree)
+    
+    var counts: Int = 0
     def dotGraph(): String
     def digraph(): String = {
       "digraph G {\n" + dotGraph() + "}\n"
@@ -38,9 +41,10 @@ class CARTx {
   case class Leaf(val parent: Branch)(val label: Int, var r: Double) extends Tree {
     var numOfLeaves = 1
     var R = r
-    def classify(x:List[Double]) = label
+    def clear() = {counts = 0}
+    def classify(x:List[Double]) = {counts = counts +1; label}
     def weakestLink() = (1E10, this)
-    def dotGraph() = "node"+hashCode() + " [label=\""+label+"\"]\n"
+    def dotGraph() = "node"+hashCode() + " [label=\""+label+"(" + counts + ")\", style=filled, fillcolor=\"0.0 " + (r) + " " + (1-r) + "\"]\n"
   }
   
   case class Branch (val parent: Branch)(var left: Tree, var right: Tree)(val label: Int, var r: Double, 
@@ -51,12 +55,16 @@ class CARTx {
       numOfLeaves = left.numOfLeaves + right.numOfLeaves
       R = left.R + right.R
     }
-    def classify(x:List[Double]) = if (x(index) <= cutoff) left.classify(x) else right.classify(x)
+    def clear() = {counts = 0; left.clear(); right.clear();}
+    def classify(x:List[Double]) = {
+      counts = counts + 1
+      if (x(index) <= cutoff) left.classify(x) else right.classify(x)
+    }
     def weakestLink() = List(left.weakestLink(), right.weakestLink(), 
         ((r - R)/(numOfLeaves -1), this)).minBy(_._1)
     def dotGraph(): String = {
       left.dotGraph() + right.dotGraph() +
-      "node"+hashCode() + " [label=\"x"+(index+1)+" <= " + cutoff + "\"]\n" +
+      "node"+hashCode() + " [label=\"x"+(index+1)+" <= " + cutoff + "(" + counts +")\", style=filled, fillcolor=\"0.0 " + (r) + " " + (1-r) + "\"]\n" +
       "node"+hashCode()+ " -> node" + left.hashCode() + "\n node"+ hashCode() + " -> node" + right.hashCode() + "\n"
     }
   }
@@ -208,8 +216,8 @@ class CARTx {
   def test(data: List[IndexedSeq[Double]], label: IndexedSeq[Int]): Double = {
     assert (data.length > 0 && data(0).length == label.length)
     assert (cTree != null)
-    println("The Accuracy on Test Set Before Pruning: " + accuracy(data, label)) // print accuracy
-    prune(data, label)  
+    //println("The Accuracy on Test Set Before Pruning: " + accuracy(data, label)) // print accuracy
+    prune(data, label)   
     println("The Accuracy on Test Set After Pruning:  " + accuracy(data, label)) // print accuracy    
     println("Total number of leaf nodes: " + cTree.numOfLeaves)
     println("ReSubstitution of the Tree: " + cTree.R)

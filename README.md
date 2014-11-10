@@ -10,7 +10,7 @@ This is a sample implementation of CART in Scala, which includes
 To run
 ```bash
 $ sbt test:run
-$ dot -Tpng graph.dot -o graph.png; open graph.png
+$ dot -Tpng graphTrain.dot -o graphTrain.png; open graphTrain.png
 ```
 
 Reference

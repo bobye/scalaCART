@@ -8,7 +8,7 @@ object CARTTest {
   def main(args: Array[String]): Unit = {
     /////////////////////////////////////////
     // Load DataSet
-    val source =  scala.io.Source.fromFile("meetup.data")
+    val source =  scala.io.Source.fromFile("spambase.data")
     val lines = source.getLines.toIndexedSeq.map(_.split(",").map(_.toDouble))
     source.close()
     
@@ -38,7 +38,15 @@ object CARTTest {
     // Learning a CART and test its accuracy
     
     onecart.train(trainData, trainLabel)
-    onecart.test(testData, testLabel)
+    val result = onecart.test(testData, testLabel)
+    
+    import java.io._
+    onecart.cTree.clear(); onecart.accuracy(trainData, trainLabel)
+    printToFile(new File("graphTrain.dot")) { p => p.print(onecart.cTree.digraph())}
+    onecart.cTree.clear(); onecart.accuracy(testData, testLabel)
+    printToFile(new File("graphTest.dot")) { p => p.print(onecart.cTree.digraph())}    
+    
+    result
     }
     
     val mean = experiments.sum/(runs)
@@ -47,8 +55,7 @@ object CARTTest {
     println()
     println("Test Accuracy: " + mean + "(+-" + std + ")")
     
-    import java.io._
-    printToFile(new File("graph.dot")) { p => p.print(onecart.cTree.digraph())}
+
     
   }
 
