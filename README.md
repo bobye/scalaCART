@@ -7,7 +7,11 @@ This is a sample implementation of CART in Scala, which includes
  - Class Assignment
  - Pruning Trees
 
-
+To run
+```bash
+$ sbt test:run
+$ dot -Tpng graph.dot -o graph.png; open graph.png
+```
 
 Reference
  - http://sites.stat.psu.edu/~jiali/course/stat557/material.html
