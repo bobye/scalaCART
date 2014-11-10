@@ -39,7 +39,8 @@ object CARTTest {
     val mean = experiments.sum/(runs)
     val std  = scala.math.sqrt(experiments.map(x => (x-mean)*(x-mean)).sum / (runs-1))
    
-    println(mean + "(+-" + std + ")")
+    println()
+    println("Test Accuracy: " + mean + "(+-" + std + ")")
   }
 
 }
