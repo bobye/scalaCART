@@ -17,9 +17,11 @@ object CARTTest {
     
     val runs = 20
     val onecart = new CARTx()
+    val size = lines.length
+        
     val experiments = for (i<- 0 until runs) yield {
     val shuffledLines = scala.util.Random.shuffle(lines.toList)   
-    val size = lines.length
+
     
     /////////////////////////////////////////
     // To separate training and testing set
@@ -40,14 +42,6 @@ object CARTTest {
     onecart.train(trainData, trainLabel)
     val result = onecart.test(testData, testLabel)
     
-    /* Comment This Part For Drawing Digraph of Trees
-     * 
-    import java.io._    
-    printToFile(new File("graphTrain.dot")) { p => p.print(onecart.cTree.digraph(trainData, trainLabel))}
-    printToFile(new File("graphTest.dot")) { p => p.print(onecart.cTree.digraph(testData, testLabel))}    
-    if (onecart.cTree.numOfLeaves <= 15) exit(0)
-    * 
-    */
     result
     }
     
@@ -56,9 +50,14 @@ object CARTTest {
    
     println()
     println("Test Accuracy: " + mean + "(+-" + std + ")")
-    
 
+    val allLines = scala.util.Random.shuffle(lines.toList).toIndexedSeq
+    val data = (0 until numOfFeats).toList.map(i => allLines.map(f=>f(i)))
+    val label= allLines.map(f=>f(numOfFeats).toInt)
     
+    import java.io._    
+    printToFile(new File("graph.dot")) { p => p.print(onecart.cTree.digraph(data, label))}
+
   }
 
 }
