@@ -28,6 +28,11 @@ class CARTx {
     val parent: Branch
     def classify(x:List[Double]): Int
     def weakestLink(): (Double, Tree)
+    def dotGraph(): String
+    def digraph(): String = {
+      "digraph G {\n" + dotGraph() + "}\n"
+    }
+    override def hashCode(): Int = (super.hashCode()+numOfLeaves+label).abs.toInt
   }
 
   case class Leaf(val parent: Branch)(val label: Int, var r: Double) extends Tree {
@@ -35,6 +40,7 @@ class CARTx {
     var R = r
     def classify(x:List[Double]) = label
     def weakestLink() = (1E10, this)
+    def dotGraph() = "node"+hashCode() + " [label=\""+label+"\"]\n"
   }
   
   case class Branch (val parent: Branch)(var left: Tree, var right: Tree)(val label: Int, var r: Double, 
@@ -48,6 +54,11 @@ class CARTx {
     def classify(x:List[Double]) = if (x(index) <= cutoff) left.classify(x) else right.classify(x)
     def weakestLink() = List(left.weakestLink(), right.weakestLink(), 
         ((r - R)/(numOfLeaves -1), this)).minBy(_._1)
+    def dotGraph(): String = {
+      left.dotGraph() + right.dotGraph() +
+      "node"+hashCode() + " [label=\"x"+(index+1)+" <= " + cutoff + "\"]\n" +
+      "node"+hashCode()+ " -> node" + left.hashCode() + "\n node"+ hashCode() + " -> node" + right.hashCode() + "\n"
+    }
   }
   ////////////////////////////////////////////
   // Impurity Functions
