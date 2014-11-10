@@ -8,14 +8,14 @@ object CARTTest {
   def main(args: Array[String]): Unit = {
     /////////////////////////////////////////
     // Load DataSet
-    val source =  scala.io.Source.fromFile("meetup.data")
+    val source =  scala.io.Source.fromFile("spambase.data")
     val lines = source.getLines.toIndexedSeq.map(_.split(",").map(_.toDouble))
     source.close()
     
     val numOfSamples = lines.length
     val numOfFeats   = lines(0).length - 1
     
-    val runs = 1
+    val runs = 20
     val onecart = new CARTx()
     val experiments = for (i<- 0 until runs) yield {
     val shuffledLines = scala.util.Random.shuffle(lines.toList)   
@@ -40,12 +40,14 @@ object CARTTest {
     onecart.train(trainData, trainLabel)
     val result = onecart.test(testData, testLabel)
     
-    import java.io._
-    onecart.cTree.clear(); onecart.accuracy(trainData, trainLabel)
-    printToFile(new File("graphTrain.dot")) { p => p.print(onecart.cTree.digraph())}
-    onecart.cTree.clear(); onecart.accuracy(testData, testLabel)
-    printToFile(new File("graphTest.dot")) { p => p.print(onecart.cTree.digraph())}    
-    
+    /* Comment This Part For Drawing Digraph of Trees
+     * 
+    import java.io._    
+    printToFile(new File("graphTrain.dot")) { p => p.print(onecart.cTree.digraph(trainData, trainLabel))}
+    printToFile(new File("graphTest.dot")) { p => p.print(onecart.cTree.digraph(testData, testLabel))}    
+    if (onecart.cTree.numOfLeaves <= 15) exit(0)
+    * 
+    */
     result
     }
     

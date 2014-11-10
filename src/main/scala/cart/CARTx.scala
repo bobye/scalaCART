@@ -29,10 +29,13 @@ class CARTx {
     def clear(): Unit
     def classify(x:List[Double]): Int
     def weakestLink(): (Double, Tree)
+    def resubstitution(l: IndexedSeq[Int]): Unit
     
     var counts: Int = 0
     def dotGraph(): String
-    def digraph(): String = {
+    def digraph(data: List[IndexedSeq[Double]], label: IndexedSeq[Int]): String = {
+      D = data; L = label; sampleSize = L.length
+      cTree.clear(); accuracy(data, label); resubstitution(0 until sampleSize);
       "digraph G {\n" + dotGraph() + "}\n"
     }
     override def hashCode(): Int = (super.hashCode()+numOfLeaves+label).abs.toInt
@@ -45,6 +48,9 @@ class CARTx {
     def classify(x:List[Double]) = {counts = counts +1; label}
     def weakestLink() = (1E10, this)
     def dotGraph() = "node"+hashCode() + " [label=\""+label+"(" + counts + ")\", shape=box, style=filled, fillcolor=\"0.0 " + (r) + " " + (1-r) + "\"]\n"
+    def resubstitution(l: IndexedSeq[Int]) = {
+      r = reSubstitution(l); R = r;
+    }
   }
   
   case class Branch (val parent: Branch)(var left: Tree, var right: Tree)(val label: Int, var r: Double, 
@@ -67,6 +73,11 @@ class CARTx {
       "node"+hashCode() + " [label=\"x"+(index+1)+" <= " + cutoff + "?(" + counts +")\", style=filled, fillcolor=\"0.0 " + (r) + " " + (1-r) + "\"]\n" +
       "node"+hashCode()+ " -> node" + left.hashCode() + " [label=\"yes\"]\n node"+ hashCode() + " -> node" + right.hashCode() + "[label=\"no\"]\n"
     }
+    def resubstitution(l: IndexedSeq[Int]) = {
+      left.resubstitution(l.filter(D(index)(_) <= cutoff))
+      right.resubstitution(l.filter(D(index)(_) > cutoff))
+      r = reSubstitution(l); R = left.R + right.R;
+    }    
   }
   ////////////////////////////////////////////
   // Impurity Functions
@@ -192,7 +203,7 @@ class CARTx {
     while (pruneTree(cTree) <= 1E-10) {} //
     var acc1 = accuracy(data, label)
     var acc2 = acc1
-    while(acc1 - acc2 <= 0.005 && cTree.numOfLeaves>2) {
+    while(acc1 - acc2 <= 0.01 && cTree.numOfLeaves>2) {
       val alpha = pruneTree(cTree, -1)
       acc2 = accuracy(data, label)      
       if (acc2 > acc1) acc1 = acc2
