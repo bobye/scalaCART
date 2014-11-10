@@ -9,27 +9,45 @@ package cart
 
 
 class CARTx {
-  var maxDepth = 20 // maximum length of cTree
+  var maxDepth = 10 // maximum length of cTree
   var D : List[IndexedSeq[Double]] = null
   var L : IndexedSeq[Int] = null
   var numOfLabels : Int = 0
+  var featureDim: Int = 0
+  var sampleSize: Int = 0
   var cTree : Tree = null
   ////////////////////////////////////////////
   // Data Structure Of Classification Tree
+  //
+  // Note: To allow efficient pruning, the tree structure is mutable
   trait Tree {
-    val numOfLeaves: Int
+    var numOfLeaves: Int
+    val label: Int
+    var r: Double // resubstitution of node
+    var R: Double // resubstitution of tree
+    val parent: Branch
     def classify(x:List[Double]): Int
+    def weakestLink(): (Double, Tree)
   }
 
-  case class Leaf(val label: Int) extends Tree {
-    val numOfLeaves = 1
+  case class Leaf(val parent: Branch)(val label: Int, var r: Double) extends Tree {
+    var numOfLeaves = 1
+    var R = r
     def classify(x:List[Double]) = label
+    def weakestLink() = (1E10, this)
   }
   
-  case class Branch (val left: Tree, val right: Tree)
-  	(val index:Int, val cutoff: Double) extends Tree  {
-    val numOfLeaves = left.numOfLeaves + right.numOfLeaves
+  case class Branch (val parent: Branch)(var left: Tree, var right: Tree)(val label: Int, var r: Double, 
+      val index:Int, val cutoff: Double) extends Tree  {
+    var numOfLeaves = 1
+    var R = r
+    def renew() = {
+      numOfLeaves = left.numOfLeaves + right.numOfLeaves
+      R = left.R + right.R
+    }
     def classify(x:List[Double]) = if (x(index) <= cutoff) left.classify(x) else right.classify(x)
+    def weakestLink() = List(left.weakestLink(), right.weakestLink(), 
+        ((r - R)/(numOfLeaves -1), this)).minBy(_._1)
   }
   ////////////////////////////////////////////
   // Impurity Functions
@@ -39,8 +57,8 @@ class CARTx {
   }
   ////////////////////////////////////////////
   // Splitting Method
-  private def percentage(I: IndexedSeq[Int]): Double = {
-    (0 until numOfLabels).map(i=>I.filter(L(_) == i).length).max / I.length.toDouble
+  private def reSubstitution(I: IndexedSeq[Int]): Double = {
+    (I.length - (0 until numOfLabels).map(i=>I.filter(L(_) == i).length).max) / sampleSize.toDouble 
   }  
   private def majorityVote(I: IndexedSeq[Int]): Int = {
     (0 until numOfLabels).map(i=>i -> I.filter(L(_) == i).length).maxBy(_._2)._1
@@ -89,10 +107,10 @@ class CARTx {
     assignment.filter(mLabel == L(_)).length > (1-threshold)*assignment.length
   }
 
-  private def split(assignment: IndexedSeq[Int], depth: Int): Tree = {
+  private def split(assignment: IndexedSeq[Int], depth: Int, parent: Branch): Tree = {
     assert(assignment.length > 0)
     if (assignment.length == 1 || depth >= maxDepth || stop(assignment)) {    
-      Leaf(majorityVote(assignment))
+      Leaf(parent)(majorityVote(assignment), reSubstitution(assignment))
     } else {
       // find the best splits among all possible features
       val selectedSplit = (0 until D.length).map(featIndex 
@@ -100,7 +118,7 @@ class CARTx {
       val goodness = selectedSplit._2._1._1
       
       if (goodness == 0) { // goodness of split does not improve
-        Leaf(majorityVote(assignment))
+        Leaf(parent)(majorityVote(assignment), reSubstitution(assignment))
       } else {
         val index = selectedSplit._1;       
         val cutoff = selectedSplit._2._1._2
@@ -108,13 +126,59 @@ class CARTx {
         val rightIndex= selectedSplit._2._2._2;
       
         // recursion
-        val leftTree  = split(leftIndex, depth+1)
-        val rightTree = split(rightIndex, depth+1)
+
       
-        Branch(leftTree, rightTree)(index, cutoff)        
+        val b = Branch(parent)(null, null)(
+            majorityVote(assignment), reSubstitution(assignment), 
+            index, cutoff)   
+        b.left  = split(leftIndex, depth+1,b)
+        b.right = split(rightIndex, depth+1,b)  
+        b.renew()
+        b
       }
     }
   } 
+  ////////////////////////////////////////////
+  // Pruning
+  private def pruneTree(t: Tree, threshold: Double = 1E-10): Double = {
+    val (link, remove) = t.weakestLink()
+
+    if (link <= threshold || threshold < 0) {      
+      val parentTree = remove.parent
+      assert(parentTree != null)
+      if (remove eq parentTree.left) {
+        parentTree.left = Leaf(parentTree)(remove.label, remove.r)
+      } else if (remove eq parentTree.right){
+        parentTree.right = Leaf(parentTree)(remove.label, remove.r) 
+      } else {
+        assert(false)
+      }
+      //println("Remove " + (remove.numOfLeaves -1) + " Terminal Nodes: " + link )
+    
+      var pathSearch = parentTree    
+      while (pathSearch != null) {
+        pathSearch.renew()
+        pathSearch = pathSearch.parent
+      }
+    }
+    link
+  }
+  
+  def accuracy(data: List[IndexedSeq[Double]], label:IndexedSeq[Int]): Double = 
+    ((0 until label.length).map(i => 
+      cTree.classify(data.map(feat => feat(i))) == label(i))
+      .filter(identity).length) / label.length.toDouble
+      
+  def prune(data: List[IndexedSeq[Double]], label:IndexedSeq[Int]): Unit = {
+    while (pruneTree(cTree) <= 1E-10) {} //
+    var acc1 = accuracy(data, label)
+    var acc2 = acc1
+    while(acc1 - acc2 <= 0.005 && cTree.numOfLeaves>2) {
+      val alpha = pruneTree(cTree, -1)
+      acc2 = accuracy(data, label)      
+      if (acc2 > acc1) acc1 = acc2
+    }
+  }
   
   ////////////////////////////////////////////
   // training and testing facilities
@@ -123,18 +187,20 @@ class CARTx {
     D = data
     L = label
     numOfLabels = L.max+1 //label starts from 0
-    val featureDim = D.length  
-    val sampleSize = D(0).length
+    featureDim = D.length  
+    sampleSize = D(0).length
     
-    cTree = split(0 until sampleSize, 0)
-    println("Total number of leaf nodes: " + cTree.numOfLeaves)
+    cTree = split(0 until sampleSize, 0, null)    
+    
   }
   
   def test(data: List[IndexedSeq[Double]], label: IndexedSeq[Int]): Unit = {
     assert (data.length > 0 && data(0).length == label.length)
     assert (cTree != null)
-    println("The Accuracy on Test Set: " + ((0 until label.length).map(i => 
-      cTree.classify(data.map(feat => feat(i))) == label(i))
-      .filter(identity).length) / label.length.toDouble) // print accuracy
+    println("The Accuracy on Test Set Before Pruning: " + accuracy(data, label)) // print accuracy
+    prune(data, label)  
+    println("The Accuracy on Test Set After Pruning:  " + accuracy(data, label)) // print accuracy    
+    println("Total number of leaf nodes: " + cTree.numOfLeaves)
+    println("ReSubstitution of the Tree: " + cTree.R)
   }
 }
