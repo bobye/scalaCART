@@ -8,7 +8,7 @@ object CARTTest {
   def main(args: Array[String]): Unit = {
     /////////////////////////////////////////
     // Load DataSet
-    val source =  scala.io.Source.fromFile("spambase.data")
+    val source =  scala.io.Source.fromFile("meetup.data")
     val lines = source.getLines.toIndexedSeq.map(_.split(",").map(_.toDouble))
     source.close()
     
