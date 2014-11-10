@@ -4,13 +4,15 @@ object CARTTest {
   def main(args: Array[String]): Unit = {
     /////////////////////////////////////////
     // Load DataSet
-    val source =  scala.io.Source.fromFile("spambase.data")
+    val source =  scala.io.Source.fromFile("meetup.data")
     val lines = source.getLines.toIndexedSeq.map(_.split(",").map(_.toDouble))
     source.close()
     
     val numOfSamples = lines.length
     val numOfFeats   = lines(0).length - 1
     
+    val runs = 20
+    val experiments = for (i<- 0 until runs) yield {
     val shuffledLines = scala.util.Random.shuffle(lines.toList)   
     val size = lines.length
     
@@ -32,6 +34,12 @@ object CARTTest {
     val cart = new CARTx()
     cart.train(trainData, trainLabel)
     cart.test(testData, testLabel)
+    }
+    
+    val mean = experiments.sum/(runs)
+    val std  = scala.math.sqrt(experiments.map(x => (x-mean)*(x-mean)).sum / (runs-1))
+   
+    println(mean + "(+-" + std + ")")
   }
 
 }

@@ -194,7 +194,7 @@ class CARTx {
     
   }
   
-  def test(data: List[IndexedSeq[Double]], label: IndexedSeq[Int]): Unit = {
+  def test(data: List[IndexedSeq[Double]], label: IndexedSeq[Int]): Double = {
     assert (data.length > 0 && data(0).length == label.length)
     assert (cTree != null)
     println("The Accuracy on Test Set Before Pruning: " + accuracy(data, label)) // print accuracy
@@ -202,5 +202,6 @@ class CARTx {
     println("The Accuracy on Test Set After Pruning:  " + accuracy(data, label)) // print accuracy    
     println("Total number of leaf nodes: " + cTree.numOfLeaves)
     println("ReSubstitution of the Tree: " + cTree.R)
+    accuracy(data, label)
   }
 }
