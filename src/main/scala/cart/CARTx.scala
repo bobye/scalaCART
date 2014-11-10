@@ -88,7 +88,7 @@ class CARTx {
   ////////////////////////////////////////////
   // Splitting Method
   private def reSubstitution(I: IndexedSeq[Int]): Double = {
-    (I.length - (0 until numOfLabels).map(i=>I.filter(L(_) == i).length).max) / sampleSize.toDouble 
+    (I.length - (0 until numOfLabels).map(i=>I.filter(L(_) == i).length).max) / I.size.toDouble 
   }  
   private def majorityVote(I: IndexedSeq[Int]): Int = {
     (0 until numOfLabels).map(i=>i -> I.filter(L(_) == i).length).maxBy(_._2)._1
@@ -140,7 +140,7 @@ class CARTx {
   private def split(assignment: IndexedSeq[Int], depth: Int, parent: Branch): Tree = {
     assert(assignment.length > 0)
     if (assignment.length == 1 || depth >= maxDepth || stop(assignment)) {    
-      Leaf(parent)(majorityVote(assignment), reSubstitution(assignment))
+      Leaf(parent)(majorityVote(assignment), reSubstitution(assignment) * assignment.size / sampleSize)
     } else {
       // find the best splits among all possible features
       val selectedSplit = (0 until D.length).map(featIndex 
@@ -159,7 +159,7 @@ class CARTx {
 
       
         val b = Branch(parent)(null, null)(
-            majorityVote(assignment), reSubstitution(assignment), 
+            majorityVote(assignment), reSubstitution(assignment)* assignment.size / sampleSize, 
             index, cutoff)   
         b.left  = split(leftIndex, depth+1,b)
         b.right = split(rightIndex, depth+1,b)  
