@@ -14,6 +14,6 @@ $ dot -Tpng graph.dot -o graph.png
 ```
 
 Reference
- - PSU [STAT597](http://sites.stat.psu.edu/~jiali/course/stat557/material.html)
+ - PSU [STAT557](http://sites.stat.psu.edu/~jiali/course/stat557/material.html)
  - https://www.salford-systems.com/resources/whitepapers/116-an-overview-of-the-cart-methodology
 
