@@ -1,4 +1,4 @@
-name := "neuron"
+name := "scalaCART"
 
 scalaVersion := "2.10.3"
 
